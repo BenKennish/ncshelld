@@ -1,0 +1,56 @@
+#!/bin/bash
+
+# A bash 'daemon' using nc (netcat)
+# We run bash as a shell and in interactive mode
+# and execute every command we receive
+#
+# Ben Kennish <ben@kennish.net>
+# Nov 2014
+#
+# TODO: stop commands being echoed before they run
+
+# exit on errors
+set -o errexit
+
+PWD=$(dirname $0)
+CMD=$(basename $0)
+
+## no authentication; drop straight to bash
+#DAEMON="/bin/bash --login -i -s"
+#
+# use bashd-auth 
+DAEMON="$PWD/bashd-auth"
+
+PORT=2323
+PID_FILE="/var/run/bashd.pid"
+
+if [ -f $PID_FILE ]
+then
+    PID=$(cat $PID_FILE)
+
+    if [ -d /proc/$PID ]
+    then
+        echo "Already running $CMD (PID $PID)" >&2
+        exit 1
+    else
+        echo Removing stale PID file $PID_FILE
+        rm -f $PID_FILE
+    fi
+fi
+
+echo "Writing PID ($$) to $PID_FILE"
+echo $$ > $PID_FILE
+
+while true
+do
+   echo "Spawning '$DAEMON' to listen on TCP port $PORT..." 
+   nc -ll -p $PORT -e $DAEMON
+   
+   # we should never reach here because "-ll" should keep the server up
+   # but just in case we do, we restart
+   echo "nc terminated!  Restarting in 5 seconds..." >&2
+   sleep 5
+done
+
+# we should never reach here
+echo $CMD finished

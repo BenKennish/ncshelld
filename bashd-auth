@@ -1,0 +1,13 @@
+#!/bin/bash
+
+SECRET='your-pass-goes-here'
+
+echo -n "Password? "
+read -s -t 5 PASSWORD
+if [ "x$PASSWORD" != "x$SECRET" ]
+then
+   echo "Incorrect!"
+   exit 1
+else
+   exec /bin/bash --login -i -s 
+fi
