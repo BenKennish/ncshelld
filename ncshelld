@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# A bash 'daemon' using nc (netcat)
+# A 'daemon' running a shell using nc (netcat)
 # We run bash as a shell and in interactive mode
 # and execute every command we receive
 #
@@ -9,20 +9,24 @@
 #
 # TODO: stop commands being echoed before they run
 
+## no authentication; drop straight to bash
+#DAEMON="/bin/bash --login -i -s"
+# -OR-
+# use ncshelld-auth
+DAEMON="$(dirname $0)/ncshelld-auth"
+#
+# what TCP/IP port should we listen on?
+PORT=2323
+# how do we run netcat (e.g. 'nc', 'netcat', '/opt/nc/nc' etc)
+NETCAT='nc'
+
+# ----------------------------------------------------------------------------
+
 # exit on errors
 set -o errexit
 
-PWD=$(dirname $0)
 CMD=$(basename $0)
-
-## no authentication; drop straight to bash
-#DAEMON="/bin/bash --login -i -s"
-#
-# use bashd-auth 
-DAEMON="$PWD/bashd-auth"
-
-PORT=2323
-PID_FILE="/var/run/bashd.pid"
+PID_FILE="/var/run/$CMD.pid"
 
 if [ -f $PID_FILE ]
 then
@@ -44,13 +48,12 @@ echo $$ > $PID_FILE
 while true
 do
    echo "Spawning '$DAEMON' to listen on TCP port $PORT..." 
-   nc -ll -p $PORT -e $DAEMON
+   $NETCAT -ll -p $PORT -e $DAEMON
+   # TODO: send STDOUT and STDERR to log files?
    
    # we should never reach here because "-ll" should keep the server up
    # but just in case we do, we restart
-   echo "nc terminated!  Restarting in 5 seconds..." >&2
+   echo "$NETCAT terminated!  Restarting in 5 seconds..." >&2
    sleep 5
 done
 
-# we should never reach here
-echo $CMD finished
